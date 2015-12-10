@@ -34,7 +34,7 @@ import Util.GPSTracker;
 
 public class MainActivity extends FragmentActivity {
 
-    private int zoom1 = 15;
+    private int zoom1 = 14;
 
     GoogleMap   map;
     ArrayList   markerPoints;
@@ -244,8 +244,6 @@ public class MainActivity extends FragmentActivity {
             try{
                 jObject = new JSONObject(jsonData[0]);
                 DirectionsJSONParser parser = new DirectionsJSONParser();
-
-                markerOptionsDes.title( DirectionsJSONParser.TimeDistance( jObject )[0] + " " + DirectionsJSONParser.TimeDistance( jObject )[1] );
 
                 // Starts parsing data
                 routes = parser.parse(jObject);
