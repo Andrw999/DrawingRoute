@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import android.graphics.Color;
@@ -43,6 +44,9 @@ public class MainActivity extends FragmentActivity {
 
     boolean     cameraMoved = false;
 
+    MarkerOptions markerOptions;
+    MarkerOptions markerOptionsDes;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,6 +78,14 @@ public class MainActivity extends FragmentActivity {
                     }
                 }
             });
+            map.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+                @Override
+                public void onMapLongClick(LatLng latLng) {
+                    latLng = new LatLng( currLatitude, currLongitude );
+                    CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, zoom1);
+                    map.animateCamera(cameraUpdate);
+                }
+            });
 
             //Add Automatic my location and a hardcode one
             //Add the random location to the map
@@ -93,14 +105,14 @@ public class MainActivity extends FragmentActivity {
                 markerPoints.add( destiny );
                 markerPoints.add( new LatLng( latitude, longitude ) );
 
-                MarkerOptions markerOptions = new MarkerOptions( );
-                MarkerOptions markerOptionsDes = new MarkerOptions( );
+                markerOptions = new MarkerOptions( );
+                markerOptionsDes = new MarkerOptions( );
 
                 //Set destination position
-                markerOptionsDes.position( destiny ).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+                markerOptionsDes.position( destiny ).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
 
                 //Set my location
-                markerOptions.position( new LatLng( latitude, longitude ) ).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+                markerOptions.position( new LatLng( latitude, longitude ) ).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
 
                 map.addMarker( markerOptions );
                 map.addMarker( markerOptionsDes );
@@ -233,8 +245,11 @@ public class MainActivity extends FragmentActivity {
                 jObject = new JSONObject(jsonData[0]);
                 DirectionsJSONParser parser = new DirectionsJSONParser();
 
+                markerOptionsDes.title( DirectionsJSONParser.TimeDistance( jObject )[0] + " " + DirectionsJSONParser.TimeDistance( jObject )[1] );
+
                 // Starts parsing data
                 routes = parser.parse(jObject);
+
             }catch(Exception e){
                 e.printStackTrace();
             }

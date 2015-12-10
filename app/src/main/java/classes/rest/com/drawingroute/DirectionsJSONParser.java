@@ -12,6 +12,31 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class DirectionsJSONParser {
 
+    public static String[] TimeDistance( JSONObject jObject ){
+
+        JSONArray jRoutes       = null;
+        JSONArray jLegs         = null;
+        String[] timeDistance  = null;
+
+        try{
+            jRoutes = jObject.getJSONArray("routes");
+            timeDistance = new String[2];
+            for(int i=0;i<jRoutes.length();i++){
+                //use the same logic in a different method
+                jLegs = ( (JSONObject)jRoutes.get(i)).getJSONArray("legs");
+                List path = new ArrayList<HashMap<String, String>>( );
+                timeDistance[0] = jLegs.getJSONObject( 0 ).getJSONObject( "distance" ).get( "text" ).toString( );
+                timeDistance[1] = jLegs.getJSONObject( 0 ).getJSONObject( "duration" ).get( "text" ).toString( );
+            }
+        } catch ( JSONException e ){
+            e.printStackTrace( );
+        } catch ( Exception e ){
+            e.printStackTrace( );
+        }
+
+        return timeDistance;
+    }
+
     /** Receives a JSONObject and returns a list of lists containing latitude and longitude */
     public List<List<HashMap<String,String>>> parse(JSONObject jObject){
 
@@ -28,7 +53,6 @@ public class DirectionsJSONParser {
             for(int i=0;i<jRoutes.length();i++){
                 jLegs = ( (JSONObject)jRoutes.get(i)).getJSONArray("legs");
                 List path = new ArrayList<HashMap<String, String>>();
-
                 /** Traversing all legs */
                 for(int j=0;j<jLegs.length();j++){
                     jSteps = ( (JSONObject)jLegs.get(j)).getJSONArray("steps");
