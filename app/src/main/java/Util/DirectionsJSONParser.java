@@ -1,4 +1,4 @@
-package classes.rest.com.drawingroute;
+package Util;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,13 +20,15 @@ public class DirectionsJSONParser {
 
         try{
             jRoutes = jObject.getJSONArray("routes");
-            timeDistance = new String[2];
+            timeDistance = new String[4];
             for(int i=0;i<jRoutes.length();i++){
                 //use the same logic in a different method
                 jLegs = ( (JSONObject)jRoutes.get(i)).getJSONArray("legs");
-                List path = new ArrayList<HashMap<String, String>>( );
+
                 timeDistance[0] = jLegs.getJSONObject( 0 ).getJSONObject( "distance" ).get( "text" ).toString( );
                 timeDistance[1] = jLegs.getJSONObject( 0 ).getJSONObject( "duration" ).get( "text" ).toString( );
+                timeDistance[2] = jLegs.getJSONObject( 0 ).get( "end_address" ).toString( );
+                timeDistance[3] = jLegs.getJSONObject( 0 ).get( "start_address" ).toString( );
             }
         } catch ( JSONException e ){
             e.printStackTrace( );

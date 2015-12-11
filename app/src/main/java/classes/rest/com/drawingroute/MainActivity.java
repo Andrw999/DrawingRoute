@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import android.graphics.Color;
@@ -27,10 +26,13 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import Util.DirectionsJSONParser;
 import Util.GPSTracker;
+import Util.URLDownloader;
 
 public class MainActivity extends FragmentActivity {
 
@@ -46,6 +48,9 @@ public class MainActivity extends FragmentActivity {
 
     MarkerOptions markerOptions;
     MarkerOptions markerOptionsDes;
+
+    Marker marker;
+    Marker marker1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,8 +119,6 @@ public class MainActivity extends FragmentActivity {
                 //Set my location
                 markerOptions.position( new LatLng( latitude, longitude ) ).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
 
-                map.addMarker( markerOptions );
-                map.addMarker( markerOptionsDes );
             } else {
                 gps.showSettingsAlert();
             }
@@ -126,76 +129,29 @@ public class MainActivity extends FragmentActivity {
                 LatLng dest = (LatLng) markerPoints.get(1);
 
                 // Getting URL to the Google Directions API
-                String url = getDirectionsUrl(origin, dest);
+                String url = URLDownloader.getDirectionsUrl( origin, dest );
 
                 DownloadTask downloadTask = new DownloadTask();
 
                 // Start downloading json data from Google Directions API
                 downloadTask.execute(url);
+
+                //Add markers with additional info
+
+//                Marker marker = map.addMarker(
+//                        markerOptions
+//                                .title( "Ubicación" )
+//                                .snippet( "Text" ) );
+//
+//                Marker marker1 = map.addMarker(
+//                        markerOptionsDes
+//                                .title( "Destino" )
+//                                .snippet( "Text" ) );
+//
+//                marker.showInfoWindow( );
+//                marker1.showInfoWindow( );
             }
         }
-    }
-
-    private String getDirectionsUrl(LatLng origin,LatLng dest){
-
-        // Origin of route
-        String str_origin = "origin="+origin.latitude+","+origin.longitude;
-
-        // Destination of route
-        String str_dest = "destination="+dest.latitude+","+dest.longitude;
-
-        // Sensor enabled
-        String sensor = "sensor=false";
-
-        // Building the parameters to the web service
-        String parameters = str_origin+"&"+str_dest+"&"+sensor;
-
-        // Output format
-        String output = "json";
-
-        // Building the url to the web service
-        String url = "https://maps.googleapis.com/maps/api/directions/"+output+"?"+parameters;
-
-        return url;
-    }
-
-    /** A method to download json data from url */
-    private String downloadUrl(String strUrl) throws IOException{
-        String data = "";
-        InputStream iStream = null;
-        HttpURLConnection urlConnection = null;
-        try{
-            URL url = new URL(strUrl);
-
-            // Creating an http connection to communicate with url
-            urlConnection = (HttpURLConnection) url.openConnection();
-
-            // Connecting to url
-            urlConnection.connect();
-
-            // Reading data from url
-            iStream = urlConnection.getInputStream();
-
-            BufferedReader br = new BufferedReader(new InputStreamReader(iStream));
-
-            StringBuffer sb = new StringBuffer();
-
-            String line = "";
-            while( ( line = br.readLine()) != null){
-                sb.append(line);
-            }
-
-            data = sb.toString();
-
-            br.close();
-
-        }catch(Exception e){
-            //  Log.v("Exception while downloading url", e.toString());
-        }finally{
-            iStream.close();
-            urlConnection.disconnect();
-        }
-        return data;
     }
 
     // Fetches data from url passed
@@ -210,7 +166,7 @@ public class MainActivity extends FragmentActivity {
 
             try{
                 // Fetching the data from web service
-                data = downloadUrl(url[0]);
+                data = URLDownloader.downloadUrl(url[0]);
             }catch(Exception e){
                 Log.d("Background Task",e.toString());
             }
@@ -234,6 +190,7 @@ public class MainActivity extends FragmentActivity {
     /** A class to parse the Google Places in JSON format */
     private class ParserTask extends AsyncTask<String, Integer, List<List<HashMap<String,String>>> >{
 
+        public String[] pointData;
         // Parsing the data in non-ui thread
         @Override
         protected List<List<HashMap<String, String>>> doInBackground(String... jsonData) {
@@ -243,10 +200,11 @@ public class MainActivity extends FragmentActivity {
 
             try{
                 jObject = new JSONObject(jsonData[0]);
-                DirectionsJSONParser parser = new DirectionsJSONParser();
+                DirectionsJSONParser parser = new DirectionsJSONParser( );
 
                 // Starts parsing data
                 routes = parser.parse(jObject);
+                pointData = DirectionsJSONParser.TimeDistance( jObject );
 
             }catch(Exception e){
                 e.printStackTrace();
@@ -259,7 +217,6 @@ public class MainActivity extends FragmentActivity {
         protected void onPostExecute(List<List<HashMap<String, String>>> result) {
             ArrayList points = null;
             PolylineOptions lineOptions = null;
-            MarkerOptions markerOptions = new MarkerOptions();
 
             // Traversing through all the routes
             for(int i=0;i<result.size();i++){
@@ -287,7 +244,23 @@ public class MainActivity extends FragmentActivity {
 
             }
 
-            // Drawing polyline in the Google Map for the i-th route
+            //Add markers with additional info
+
+                marker = map.addMarker(
+                        markerOptions
+                                .title( pointData[2] )
+                                .snippet( "Distancia: " + pointData[0]
+                                        + " Tiempo de llegada: " + pointData[1] ) );
+
+                marker1 = map.addMarker(
+                        markerOptionsDes
+                                .title( pointData[3] )
+                                .snippet( "Distancia: " + pointData[0]
+                                        + " Tiempo de llegada: " + pointData[1] ) );
+
+                marker.showInfoWindow( );
+                marker1.showInfoWindow( );
+
             map.addPolyline(lineOptions);
         }
     }
