@@ -1,11 +1,5 @@
 package classes.rest.com.drawingroute;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -135,21 +129,6 @@ public class MainActivity extends FragmentActivity {
 
                 // Start downloading json data from Google Directions API
                 downloadTask.execute(url);
-
-                //Add markers with additional info
-
-//                Marker marker = map.addMarker(
-//                        markerOptions
-//                                .title( "Ubicación" )
-//                                .snippet( "Text" ) );
-//
-//                Marker marker1 = map.addMarker(
-//                        markerOptionsDes
-//                                .title( "Destino" )
-//                                .snippet( "Text" ) );
-//
-//                marker.showInfoWindow( );
-//                marker1.showInfoWindow( );
             }
         }
     }
@@ -250,7 +229,8 @@ public class MainActivity extends FragmentActivity {
                         markerOptions
                                 .title( pointData[2] )
                                 .snippet( "Distancia: " + pointData[0]
-                                        + " Tiempo de llegada: " + pointData[1] ) );
+                                        + " Tiempo de llegada: " + pointData[1] )
+                                .draggable( true ) );
 
                 marker1 = map.addMarker(
                         markerOptionsDes
