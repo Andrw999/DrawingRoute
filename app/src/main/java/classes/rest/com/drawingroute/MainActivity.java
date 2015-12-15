@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.json.JSONObject;
 
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
@@ -24,6 +26,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import Util.AdminSQLiteOpenHelper;
 import Util.DirectionsJSONParser;
 import Util.GPSTracker;
 import Util.URLDownloader;
@@ -49,6 +52,29 @@ public class MainActivity extends FragmentActivity {
 
     Marker marker;
     Marker marker1;
+
+    //DATABASE
+    public static void select( ) {
+        AdminSQLiteOpenHelper admin = new AdminSQLiteOpenHelper( getAppContext( ),"points", null, 1 );
+        SQLiteDatabase bd = admin.getWritableDatabase(); //Create and/or open a database that will be used for reading and writing.
+
+        if(findM.getText().toString().length() > 0){
+            Cursor fila = bd.rawQuery(
+                    "select id,lat,longi from punto where id=" + "'"+findM.getText().toString()+"'", null);
+            if (fila.moveToFirst()) {
+                idM.setText(fila.getString(0));
+                latM.setText(fila.getString(1));
+                longiM.setText(fila.getString(2));
+            } else
+                Toast.makeText(getAppContext(), "No existe ese punto",
+                        Toast.LENGTH_SHORT).show();
+        }
+        else{
+            Toast.makeText(getAppContext(), "No has ingresado un nombre",
+                    Toast.LENGTH_SHORT).show();
+        }
+        bd.close();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
