@@ -28,6 +28,10 @@ import Util.DirectionsJSONParser;
 import Util.GPSTracker;
 import Util.URLDownloader;
 
+
+/**
+ * Now will do it static again
+ */
 public class MainActivity extends FragmentActivity {
 
     private int zoom1 = 14;
