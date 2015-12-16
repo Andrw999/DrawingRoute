@@ -20,6 +20,7 @@ import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -53,27 +54,47 @@ public class MainActivity extends FragmentActivity {
     Marker marker;
     Marker marker1;
 
-    //DATABASE
-    public static void select( ) {
-        AdminSQLiteOpenHelper admin = new AdminSQLiteOpenHelper( getAppContext( ),"points", null, 1 );
-        SQLiteDatabase bd = admin.getWritableDatabase(); //Create and/or open a database that will be used for reading and writing.
+    Marker[] dbMarkers;
 
-        if(findM.getText().toString().length() > 0){
-            Cursor fila = bd.rawQuery(
-                    "select id,lat,longi from punto where id=" + "'"+findM.getText().toString()+"'", null);
-            if (fila.moveToFirst()) {
-                idM.setText(fila.getString(0));
-                latM.setText(fila.getString(1));
-                longiM.setText(fila.getString(2));
-            } else
-                Toast.makeText(getAppContext(), "No existe ese punto",
-                        Toast.LENGTH_SHORT).show();
+    public BitmapDescriptor getMarkerColor(int index ){
+        BitmapDescriptor color = null;
+        switch ( index ){
+            case 0:
+                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN );
+                break;
+            case 1:
+                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE );
+                break;
+            case 2:
+                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN );
+                break;
+            case 3:
+                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET );
+                break;
+            default:
+                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED );
+                break;
         }
-        else{
-            Toast.makeText(getAppContext(), "No has ingresado un nombre",
-                    Toast.LENGTH_SHORT).show();
+        return color;
+    }
+
+    //DATABASE
+    public void select( ) {
+        AdminSQLiteOpenHelper admin = new AdminSQLiteOpenHelper( this.getApplicationContext( ), "points", null, 1 );
+        SQLiteDatabase db = admin.getWritableDatabase( ); //Create and/or open a database that will be used for reading and writing.
+
+        Cursor row = db.rawQuery( "SELECT id, name, latitude, longitude FROM client", null );
+
+        dbMarkers = new Marker[ row.getColumnCount( ) ];
+        for( int i = 0; i< row.getColumnCount( ); i++ ){
+            if( row.moveToNext( ) ){
+                dbMarkers[ i ] = map.addMarker( new MarkerOptions( )
+                .position( new LatLng( row.getDouble( 2 ), row.getDouble( 3 ) ) )
+                .title( "Id: " + row.getInt( 0 ) + "\n Nombre: " + row.getString( 1 ) )
+                .icon( getMarkerColor( i ) ) );
+            }
         }
-        bd.close();
+        db.close( );
     }
 
     @Override
@@ -159,6 +180,8 @@ public class MainActivity extends FragmentActivity {
 
                 // Start downloading json data from Google Directions API
                 downloadTask.execute(url);
+
+                select( );
             }
         }
     }
