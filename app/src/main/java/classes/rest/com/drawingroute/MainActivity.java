@@ -27,9 +27,9 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import MapGraphics.MarkerStyleOptions;
 import Util.AdminSQLiteOpenHelper;
 import Util.DirectionsJSONParser;
-import Util.GPSTracker;
 import Util.URLDownloader;
 
 
@@ -56,27 +56,9 @@ public class MainActivity extends FragmentActivity {
 
     Marker[] dbMarkers;
 
-    public BitmapDescriptor getMarkerColor(int index ){
-        BitmapDescriptor color = null;
-        switch ( index ){
-            case 0:
-                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN );
-                break;
-            case 1:
-                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE );
-                break;
-            case 2:
-                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN );
-                break;
-            case 3:
-                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET );
-                break;
-            default:
-                color = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED );
-                break;
-        }
-        return color;
-    }
+    LatLng[] newMarkers;
+
+    public int currentMarkerFlag;
 
     //DATABASE
     public void select( ) {
@@ -86,12 +68,14 @@ public class MainActivity extends FragmentActivity {
         Cursor row = db.rawQuery( "SELECT id, name, latitude, longitude FROM client", null );
 
         dbMarkers = new Marker[ row.getColumnCount( ) ];
-        for( int i = 0; i< row.getColumnCount( ); i++ ){
+        newMarkers = new LatLng[ row.getColumnCount( ) ];
+        for( int i = 0; i < row.getColumnCount( ); i++ ){
             if( row.moveToNext( ) ){
                 dbMarkers[ i ] = map.addMarker( new MarkerOptions( )
                 .position( new LatLng( row.getDouble( 2 ), row.getDouble( 3 ) ) )
-                .title( "Id: " + row.getInt( 0 ) + "\n Nombre: " + row.getString( 1 ) )
-                .icon( getMarkerColor( i ) ) );
+                //.title( "Id: " + row.getInt( 0 ) + ", Nombre: " + row.getString( 1 ) )
+                .icon( MarkerStyleOptions.getMarkerColor( i ) ) );
+                newMarkers[ i ] = new LatLng( row.getDouble( 2 ), row.getDouble( 3 ) );
             }
         }
         db.close( );
@@ -115,6 +99,9 @@ public class MainActivity extends FragmentActivity {
 
             // Enable MyLocation Button in the Map
             map.setMyLocationEnabled(true);
+
+            select( );
+            //Focus camera and stuff like that
             map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
                 @Override
                 public void onMyLocationChange(Location location) {
@@ -137,52 +124,36 @@ public class MainActivity extends FragmentActivity {
                 }
             });
 
-            //Add Automatic my location and a hardcode one
-            //Add the random location to the map
-            LatLng destiny = new LatLng( 20.679384, -103.361018 );
+            // Setting onclick event listener for the map
+            map.setOnMapClickListener( new GoogleMap.OnMapClickListener( ) {
+                @Override
+                public void onMapClick( LatLng point ) {
+                    markerPoints.clear();
+                    map.clear();
+                    select( );
 
-            markerPoints = new ArrayList();
+                    markerPoints.add( point );
 
-            //Current Location
+                    // Checks, whether start and end locations are captured
+                    //Draw lines from my point to the rest of the points
 
-            GPSTracker gps = new GPSTracker( getApplicationContext( ) );
+                    LatLng origin = (LatLng) markerPoints.get(0);
+                    //make bucle
 
-            if(gps.canGetLocation()) {
-                double latitude = gps.getLatitude();
-                double longitude = gps.getLongitude();
+                    for( int i = 0; i < dbMarkers.length; i++ ){
+                        // Getting URL to the Google Directions API
+                        LatLng dest = newMarkers[ i ];
+                        String url = URLDownloader.getDirectionsUrl( origin, dest );
 
-                //Add pints
-                markerPoints.add( destiny );
-                markerPoints.add( new LatLng( latitude, longitude ) );
+                        currentMarkerFlag = i;
 
-                markerOptions = new MarkerOptions( );
-                markerOptionsDes = new MarkerOptions( );
+                        DownloadTask downloadTask = new DownloadTask();
 
-                //Set destination position
-                markerOptionsDes.position( destiny ).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
-
-                //Set my location
-                markerOptions.position( new LatLng( latitude, longitude ) ).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
-
-            } else {
-                gps.showSettingsAlert();
-            }
-
-            // Checks, whether start and end locations are captured
-            if(markerPoints.size() >= 2){
-                LatLng origin = (LatLng) markerPoints.get(0);
-                LatLng dest = (LatLng) markerPoints.get(1);
-
-                // Getting URL to the Google Directions API
-                String url = URLDownloader.getDirectionsUrl( origin, dest );
-
-                DownloadTask downloadTask = new DownloadTask();
-
-                // Start downloading json data from Google Directions API
-                downloadTask.execute(url);
-
-                select( );
-            }
+                        // Start downloading json data from Google Directions API
+                        downloadTask.execute(url);
+                    }
+                }
+            });
         }
     }
 
@@ -272,27 +243,34 @@ public class MainActivity extends FragmentActivity {
                 // Adding all the points in the route to LineOptions
                 lineOptions.addAll(points);
                 lineOptions.width( 4 );
-                lineOptions.color( Color.MAGENTA );
+                lineOptions.color( MarkerStyleOptions.polylineColor( currentMarkerFlag ) );
 
             }
 
             //Add markers with additional info
 
-                marker = map.addMarker(
-                        markerOptions
-                                .title( pointData[2] )
-                                .snippet( "Distancia: " + pointData[0]
-                                        + " Tiempo de llegada: " + pointData[1] )
-                                .draggable( true ) );
+            dbMarkers[ currentMarkerFlag ] = map.addMarker(
+                    new MarkerOptions( )
+                            .title( pointData[2] )
+                            .snippet( "Distancia: " + pointData[0]
+                                + " Tiempo de llegada: " + pointData[1] ) );
+            dbMarkers[ currentMarkerFlag ].showInfoWindow( );
 
-                marker1 = map.addMarker(
-                        markerOptionsDes
-                                .title( pointData[3] )
-                                .snippet( "Distancia: " + pointData[0]
-                                        + " Tiempo de llegada: " + pointData[1] ) );
-
-                marker.showInfoWindow( );
-                marker1.showInfoWindow( );
+//            marker = map.addMarker(
+//                markerOptions
+//                        .title( pointData[2] )
+//                        .snippet( "Distancia: " + pointData[0]
+//                                + " Tiempo de llegada: " + pointData[1] )
+//                        .draggable( true ) );
+//
+//            marker1 = map.addMarker(
+//                    markerOptionsDes
+//                            .title( pointData[3] )
+//                            .snippet( "Distancia: " + pointData[0]
+//                                    + " Tiempo de llegada: " + pointData[1] ) );
+//
+//            marker.showInfoWindow( );
+//            marker1.showInfoWindow( );
 
             map.addPolyline(lineOptions);
         }
