@@ -8,19 +8,18 @@ import org.json.JSONObject;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -28,7 +27,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import MapGraphics.MarkerStyleOptions;
-import Util.AdminSQLiteOpenHelper;
+import SQL.AdminSQLiteOpenHelper;
 import Util.DirectionsJSONParser;
 import Util.URLDownloader;
 
@@ -48,22 +47,16 @@ public class MainActivity extends FragmentActivity {
 
     boolean     cameraMoved = false;
 
-    MarkerOptions markerOptions;
-    MarkerOptions markerOptionsDes;
-
-    Marker marker;
-    Marker marker1;
-
     Marker[] dbMarkers;
 
     LatLng[] newMarkers;
 
-    public int currentMarkerFlag;
-
     //DATABASE
     public void select( ) {
         AdminSQLiteOpenHelper admin = new AdminSQLiteOpenHelper( this.getApplicationContext( ), "points", null, 1 );
-        SQLiteDatabase db = admin.getWritableDatabase( ); //Create and/or open a database that will be used for reading and writing.
+
+        //Create and/or open a database that will be used for reading and writing.
+        SQLiteDatabase db = admin.getWritableDatabase( );
 
         Cursor row = db.rawQuery( "SELECT id, name, latitude, longitude FROM client", null );
 
@@ -72,9 +65,10 @@ public class MainActivity extends FragmentActivity {
         for( int i = 0; i < row.getColumnCount( ); i++ ){
             if( row.moveToNext( ) ){
                 dbMarkers[ i ] = map.addMarker( new MarkerOptions( )
-                .position( new LatLng( row.getDouble( 2 ), row.getDouble( 3 ) ) )
-                //.title( "Id: " + row.getInt( 0 ) + ", Nombre: " + row.getString( 1 ) )
-                .icon( MarkerStyleOptions.getMarkerColor( i ) ) );
+                        .position( new LatLng( row.getDouble( 2 ), row.getDouble( 3 ) ) )
+                        .title( "Id: " + row.getInt( 0 ) )
+                        .snippet( "Nombre: " + row.getString( 1 ) )
+                        .icon( BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE ) ) );
                 newMarkers[ i ] = new LatLng( row.getDouble( 2 ), row.getDouble( 3 ) );
             }
         }
@@ -90,19 +84,20 @@ public class MainActivity extends FragmentActivity {
         markerPoints = new ArrayList();
 
         // Getting reference to SupportMapFragment of the activity_main
-        SupportMapFragment fm = (SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.map);
+        SupportMapFragment fm = (SupportMapFragment)getSupportFragmentManager().findFragmentById( R.id.map );
 
         // Getting Map for the SupportMapFragment
         map = fm.getMap();
 
-        if(map!=null){
+        if( map!=null ){
 
             // Enable MyLocation Button in the Map
-            map.setMyLocationEnabled(true);
+            map.setMyLocationEnabled( true );
 
             select( );
             //Focus camera and stuff like that
-            map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
+            map.setOnMyLocationChangeListener(
+                    new GoogleMap.OnMyLocationChangeListener() {
                 @Override
                 public void onMyLocationChange(Location location) {
                     currLatitude = location.getLatitude( );
@@ -134,24 +129,39 @@ public class MainActivity extends FragmentActivity {
 
                     markerPoints.add( point );
 
+                    //add marker push marker
+                    map.addMarker( new MarkerOptions( )
+                            .position( point )
+                            .title( "Ubicación del sinestro" )
+                            .icon( BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE ) ) );
+
                     // Checks, whether start and end locations are captured
                     //Draw lines from my point to the rest of the points
 
-                    LatLng origin = (LatLng) markerPoints.get(0);
-                    //make bucle
+                    LatLng origin = (LatLng) markerPoints.get( 0 );
 
+                    map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+                        @Override
+                        public boolean onMarkerClick(Marker marker) {
+                            //Call a similar ParserTask method that set the info to the clicked marker
+                            //Would be better not ti show them since the beginning
+
+                            return false;
+                        }
+                    });
+
+                    //make bucle
                     for( int i = 0; i < dbMarkers.length; i++ ){
                         // Getting URL to the Google Directions API
                         LatLng dest = newMarkers[ i ];
                         String url = URLDownloader.getDirectionsUrl( origin, dest );
 
-                        currentMarkerFlag = i;
-
-                        DownloadTask downloadTask = new DownloadTask();
+                        DownloadTask downloadTask = new DownloadTask( );
 
                         // Start downloading json data from Google Directions API
-                        downloadTask.execute(url);
+                        downloadTask.execute( url );
                     }
+
                 }
             });
         }
@@ -177,15 +187,14 @@ public class MainActivity extends FragmentActivity {
         }
 
         // Executes in UI thread, after the execution of
-        // doInBackground()
         @Override
-        protected void onPostExecute(String result) {
-            super.onPostExecute(result);
+        protected void onPostExecute( String result ) {
+            super.onPostExecute( result );
 
-            ParserTask parserTask = new ParserTask();
+            ParserTask parserTask = new ParserTask( );
 
             // Invokes the thread for parsing the JSON data
-            parserTask.execute(result);
+            parserTask.execute( result );
 
         }
     }
@@ -207,10 +216,10 @@ public class MainActivity extends FragmentActivity {
 
                 // Starts parsing data
                 routes = parser.parse(jObject);
-                pointData = DirectionsJSONParser.TimeDistance( jObject );
+                pointData = DirectionsJSONParser.timeDistance( jObject );
 
             }catch(Exception e){
-                e.printStackTrace();
+                e.printStackTrace( );
             }
             return routes;
         }
@@ -237,42 +246,16 @@ public class MainActivity extends FragmentActivity {
                     double lng = Double.parseDouble(point.get("lng"));
                     LatLng position = new LatLng(lat, lng);
 
-                    points.add(position);
+                    points.add( position );
                 }
 
                 // Adding all the points in the route to LineOptions
-                lineOptions.addAll(points);
+                lineOptions.addAll( points );
                 lineOptions.width( 4 );
-                lineOptions.color( MarkerStyleOptions.polylineColor( currentMarkerFlag ) );
-
+                lineOptions.color( MarkerStyleOptions.polylineColor(  ) );
             }
 
-            //Add markers with additional info
-
-            dbMarkers[ currentMarkerFlag ] = map.addMarker(
-                    new MarkerOptions( )
-                            .title( pointData[2] )
-                            .snippet( "Distancia: " + pointData[0]
-                                + " Tiempo de llegada: " + pointData[1] ) );
-            dbMarkers[ currentMarkerFlag ].showInfoWindow( );
-
-//            marker = map.addMarker(
-//                markerOptions
-//                        .title( pointData[2] )
-//                        .snippet( "Distancia: " + pointData[0]
-//                                + " Tiempo de llegada: " + pointData[1] )
-//                        .draggable( true ) );
-//
-//            marker1 = map.addMarker(
-//                    markerOptionsDes
-//                            .title( pointData[3] )
-//                            .snippet( "Distancia: " + pointData[0]
-//                                    + " Tiempo de llegada: " + pointData[1] ) );
-//
-//            marker.showInfoWindow( );
-//            marker1.showInfoWindow( );
-
-            map.addPolyline(lineOptions);
+            map.addPolyline( lineOptions );
         }
     }
 

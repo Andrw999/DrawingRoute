@@ -12,11 +12,11 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class DirectionsJSONParser {
 
-    public static String[] TimeDistance( JSONObject jObject ){
+    public static String[] timeDistance(JSONObject jObject ){
 
         JSONArray jRoutes       = null;
         JSONArray jLegs         = null;
-        String[] timeDistance  = null;
+        String[]  timeDistance  = null;
 
         try{
             jRoutes = jObject.getJSONArray("routes");
